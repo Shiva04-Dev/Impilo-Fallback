@@ -1,0 +1,27 @@
+{
+  "name": "impilo-fallback",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shiva04-Dev/Impilo-Fallback.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Shiva04-Dev/Impilo-Fallback/issues"
+  },
+  "homepage": "https://github.com/Shiva04-Dev/Impilo-Fallback#readme",
+  "description": "",
+  "dependencies": {
+    "@azure/cosmos": "^4.9.3",
+    "axios": "^1.18.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "node-cron": "^4.4.1"
+  }
+}
