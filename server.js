@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.static("public")); // serves chat-demo.html at /chat-demo.html
 
 const cosmos = new CosmosClient({ endpoint: process.env.COSMOS_ENDPOINT, key: process.env.COSMOS_KEY });
-const container = cosmos.database("ImpiloDB").container("Users");
+const container = cosmos.database("Impilo").container("Users");
 
 // Real WhatsApp webhook (dormant until business verification clears)
 app.get("/webhook", (req, res) => {
