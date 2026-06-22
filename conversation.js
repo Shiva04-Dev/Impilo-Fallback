@@ -2,6 +2,7 @@ const { isCrisis, isGBV } = require("./crisis");
 const { SYSTEM_PROMPT } = require("./systemPrompt");
 const { getHistory, appendTurns } = require("./history");
 const { callLLM } = require("./ai");
+const { maybeUpdateTopicLabel } = require("./topicLabel");
 
 const CRISIS_SCRIPT = [
   "Thank you for telling me that. What you're feeling right now sounds really serious, and I want to make sure you get support from real people, not just from me — you don't have to carry this alone.",
@@ -45,6 +46,9 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
     { role: "user", content: userText },
     { role: "assistant", content: reply },
   ]);
+
+  // update topic label every ~4 turns for follow-up messages
+  await maybeUpdateTopicLabel(container, userId, [...history, { role: "user", content: userText }]);
 }
 
 module.exports = { handleIncomingMessage };

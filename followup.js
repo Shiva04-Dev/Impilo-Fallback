@@ -11,11 +11,17 @@ async function getStaleUsers(container, hoursAgo = 48) {
 }
 
 async function sendFollowUp(userId, lastTopicLabel) {
-  const reply = await callLLM([
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: `(System note: 48 hours have passed since this user last spoke with you. They previously mentioned: "${lastTopicLabel || "how they were feeling"}". Send a warm, brief check-in asking how things have been since.)` },
-  ]);
-  await sendWhatsAppMessage(userId, reply);
+  const url = `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  await axios.post(
+    url,
+    {
+      messaging_product: "whatsapp",
+      to: userId,
+      type: "template",
+      template: { name: "hello_world", language: { code: "en_US" } }
+    },
+    { headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN.trim()}` } }
+  );
 }
 
 function scheduleFollowUps(container) {
