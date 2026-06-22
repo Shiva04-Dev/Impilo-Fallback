@@ -1,6 +1,6 @@
 const { isCrisis, isGBV } = require("./crisis");
 const { SYSTEM_PROMPT } = require("./systemPrompt");
-const { getHistory, appendTurns } = require("./history");
+const { getHistory, appendTurns, resetHistory } = require("./history");
 const { callLLM } = require("./ai");
 const { maybeUpdateTopicLabel } = require("./topicLabel");
 
@@ -18,6 +18,18 @@ const GBV_CRISIS_SCRIPT = [
   "Whenever you're ready, I'm here to keep chatting — there's no rush.",
 ];
 
+const RESET_TRIGGERS = [
+  "reset",
+  "clear",
+  "start afresh",
+  "start over",
+  "new chat",
+  "forget everything",
+  "clear history",
+  "clear chat",
+  "reset chat",
+];
+
 async function handleIncomingMessage(container, userId, userText, sendFn) {
   if (isGBV(userText)) {
     for (const line of GBV_CRISIS_SCRIPT) await sendFn(line);
@@ -33,6 +45,16 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
       { role: "user", content: userText },
       { role: "assistant", content: "[Crisis resources provided]" },
     ]);
+    return;
+  }
+
+  const isReset = RESET_TRIGGERS.some(trigger => 
+    userText.toLowerCase().includes(trigger)
+  );
+
+  if (isReset) {
+    await resetHistory(container, userId);
+    await sendFn("Your chat history has been cleared! We're starting fresh — how are you feeling today?");
     return;
   }
 
