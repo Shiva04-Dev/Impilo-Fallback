@@ -18,18 +18,16 @@ async function appendTurns(container, userId, newTurns, extraFields = {}) {
 }
 
 async function resetHistory(container, userId) {
-  // Step 1: Read the FULL existing document so we don't lose any fields
   const { resource } = await container.item(userId, userId).read().catch(() => ({ resource: null }));
   
-  // Step 2: If no document exists yet, nothing to reset
+  //If no document exists yet, nothing to reset
   if (!resource) return;
 
-  // Step 3: Upsert the full document back, but with history wiped
   // This preserves lastTopicLabel, lastMessageDate, and any other fields
   await container.items.upsert({
-    ...resource,          // keep ALL existing fields (lastTopicLabel, etc.)
-    history: [],          // only reset the history
-    lastMessageDate: new Date().toISOString(), // update the timestamp
+    ...resource,
+    history: [],
+    lastMessageDate: new Date().toISOString(),
   });
 }
 
