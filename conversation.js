@@ -1,5 +1,5 @@
 const { isCrisis, isGBV } = require("./crisis");
-const { SYSTEM_PROMPT } = require("./systemPrompt");
+const { getSystemPrompt } = require("./systemPrompt");
 const { getHistory, appendTurns, resetHistory } = require("./history");
 const { callLLM } = require("./ai");
 const { maybeUpdateTopicLabel } = require("./topicLabel");
