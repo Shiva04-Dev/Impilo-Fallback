@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 const axios = require("axios");
 
 async function sendWhatsAppMessage(to, text) {

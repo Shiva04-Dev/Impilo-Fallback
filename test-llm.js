@@ -1,6 +1,6 @@
 // test-llm.js — run with: node test-llm.js
 // Uses real API calls (~10 requests). Don't run it in a loop: it uses your free quota.
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 const { callLLM } = require("./ai");
 const { getSystemPrompt } = require("./systemPrompt");
 
