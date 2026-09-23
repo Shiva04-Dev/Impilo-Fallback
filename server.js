@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 const express = require("express");
 const { CosmosClient } = require("@azure/cosmos");
 const { handleIncomingMessage } = require("./conversation");
@@ -50,6 +50,6 @@ app.post("/admin/trigger-followup", async (req, res) => {
   res.json({ messaged: staleUsers.length });
 });
 
-scheduleFollowUps(container); // real hourly cron check, runs alongside the manual trigger above
+// scheduleFollowUps(container); // real hourly cron check, runs alongside the manual trigger above
 
 app.listen(process.env.PORT || 3000, () => console.log(`Impilo running on port ${process.env.PORT || 3000}`));

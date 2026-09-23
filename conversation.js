@@ -89,7 +89,8 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
   }
  
   // 3. Reset
-  const isReset = RESET_TRIGGERS.some(trigger => userText.toLowerCase().includes(trigger));
+  const normalized = userText.toLowerCase().trim().replace(/[.!?]+$/, "");
+  const isReset = RESET_TRIGGERS.includes(normalized);
   if (isReset) {
     await resetHistory(container, userId);
     await sendFn(RESET_MESSAGES[lang] ?? RESET_MESSAGES.en);
