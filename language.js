@@ -92,6 +92,7 @@ async function setStoredLanguage(container, userId, lang) {
   await container.items.upsert({
     id: LANG_KEY(userId),
     userId,
+    type: "language",
     lang,
   });
 }
