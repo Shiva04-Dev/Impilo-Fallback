@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public")); // serves chat-demo.html at /chat-demo.html
 
-let users; // MongoDB `users` collection, set in start() below
+let users, webSessions; // MongoDB collections, set in start() below
 
 function requireAdminKey(req, res, next) {
   if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) return res.sendStatus(401);
@@ -30,6 +30,14 @@ function demoChatLimiter(req, res, next) {
   entry.count++;
   next();
 }
+
+// Remove expired rate-limit entries every minute so the map doesn't grow forever
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of demoChatHits) {
+    if (now - entry.start > 60_000) demoChatHits.delete(ip);
+  }
+}, 60_000).unref();
 
 // Real WhatsApp webhook (dormant until business verification clears)
 app.get("/webhook", (req, res) => {
@@ -56,10 +64,20 @@ app.post("/webhook", async (req, res) => {
 
 // Custom chat front-end endpoint (the one actually in use right now)
 app.post("/demo/chat", demoChatLimiter, async (req, res) => {
-  const { userId, message } = req.body;
-  const outgoing = [];
-  await handleIncomingMessage(users, userId, message, async (text) => { outgoing.push(text); });
-  res.json({ messages: outgoing });
+  const { userId, message } = req.body ?? {};
+  // Web chats may only use web- IDs, and live in their own collection,
+  // so the website can never read or change a WhatsApp user's data.
+  if (typeof userId !== "string" || !userId.startsWith("web-") || typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+  try {
+    const outgoing = [];
+    await handleIncomingMessage(webSessions, userId, message, async (text) => { outgoing.push(text); });
+    res.json({ messages: outgoing });
+  } catch (err) {
+    console.error("Demo chat error:", err.message);
+    if (!res.headersSent) res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
 });
 
 // Manual follow-up trigger, for demo/recording purposes
@@ -72,7 +90,7 @@ app.post("/admin/trigger-followup", requireAdminKey, async (req, res) => {
 // scheduleFollowUps(users); // real hourly cron check, runs alongside the manual trigger above
 
 async function start() {
-  users = await connectDB();
+  ({ users, webSessions } = await connectDB());
   app.listen(process.env.PORT || 3000, () => console.log(`Impilo running on port ${process.env.PORT || 3000}`));
 }
 
