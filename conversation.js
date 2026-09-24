@@ -70,26 +70,25 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
   if (changed) await setStoredLanguage(container, userId, lang);
  
   // 2. Crisis / GBV — always fires first, in the resolved language
-  if (isGBV(userText)) {
-    for (const line of GBV_CRISIS_SCRIPTS[lang] ?? GBV_CRISIS_SCRIPTS.en) await sendFn(line);
+  const crisisHit = isCrisis(userText);
+  const gbvHit = isGBV(userText);
+
+  if (crisisHit || gbvHit) {
+    const scripts = [
+      ...(crisisHit ? (CRISIS_SCRIPTS[lang] ?? CRISIS_SCRIPTS.en) : []),
+      ...(gbvHit ? (GBV_CRISIS_SCRIPTS[lang] ?? GBV_CRISIS_SCRIPTS.en) : []),
+    ];
+    for (const line of scripts) await sendFn(line);
     await appendTurns(container, userId, [
       { role: "user", content: userText },
-      { role: "assistant", content: "[Crisis resources provided — GBV variant]" },
-    ]);
-    return;
-  }
- 
-  if (isCrisis(userText)) {
-    for (const line of CRISIS_SCRIPTS[lang] ?? CRISIS_SCRIPTS.en) await sendFn(line);
-    await appendTurns(container, userId, [
-      { role: "user", content: userText },
-      { role: "assistant", content: "[Crisis resources provided]" },
+      { role: "assistant", content: `[Crisis resources provided${crisisHit && gbvHit ? " — crisis+GBV" : crisisHit ? "" : " — GBV variant"}]` },
     ]);
     return;
   }
  
   // 3. Reset
-  const isReset = RESET_TRIGGERS.some(trigger => userText.toLowerCase().includes(trigger));
+  const normalized = userText.toLowerCase().trim().replace(/[.!?]+$/, "");
+  const isReset = RESET_TRIGGERS.includes(normalized);
   if (isReset) {
     await resetHistory(container, userId);
     await sendFn(RESET_MESSAGES[lang] ?? RESET_MESSAGES.en);
@@ -98,18 +97,30 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
  
   // 4. Normal LLM turn
   const history = await getHistory(container, userId);
+
   const messages = [
     { role: "system", content: getSystemPrompt(lang) },
     ...history,
     { role: "user", content: userText },
   ];
-  const reply = await callLLM(messages);
-  const parts = reply.split("|||").map(s => s.trim()).filter(Boolean);
+
+  let reply;
+  try {
+    reply = await callLLM(messages);
+  } catch (err) {
+    console.error(err.message);
+    await sendFn("Sorry, I'm having trouble replying right now. Please try again in a few minutes.");
+    await sendFn("If you need to talk to someone now, SADAG is free 24/7: 0800 567 567.");
+    return;
+  }
+
+  const MAX_PARTS = 3;
+  const parts = reply.split("|||").map(s => s.trim()).filter(Boolean).slice(0, MAX_PARTS);
   for (const part of parts) await sendFn(part);
- 
+
   await appendTurns(container, userId, [
     { role: "user", content: userText },
-    { role: "assistant", content: reply },
+    { role: "assistant", content: parts.join(" ||| ") }, // save only what was actually sent
   ]);
  
   // 5. Update topic label every ~4 turns
