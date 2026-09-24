@@ -25,8 +25,9 @@ async function test(name, fn) {
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
 (async () => {
-  const users = await connectDB();
+  const { users, webSessions } = await connectDB();
   await users.deleteMany({ _id: { $in: [TEST_USER, WEB_USER] } });
+  await webSessions.deleteMany({ _id: WEB_USER });
 
   await test("New user has empty history and no language", async () => {
     assert((await getHistory(users, TEST_USER)).length === 0, "history not empty");
@@ -83,7 +84,16 @@ function assert(cond, msg) { if (!cond) throw new Error(msg); }
     assert(!stale.includes(WEB_USER), "web- user should be excluded");
   });
 
+  await test("Web and WhatsApp data are stored separately", async () => {
+    await appendTurns(webSessions, WEB_USER, [{ role: "user", content: "web only" }]);
+    const inWeb = await webSessions.findOne({ _id: WEB_USER });
+    const inUsers = await users.findOne({ _id: WEB_USER });
+    assert(inWeb?.history?.some((m) => m.content === "web only"), "web message not in web_sessions");
+    assert(!inUsers?.history?.some((m) => m.content === "web only"), "web message leaked into users");
+  });
+
   await users.deleteMany({ _id: { $in: [TEST_USER, WEB_USER] } });
+  await webSessions.deleteMany({ _id: WEB_USER });
   await closeDB();
 
   const passed = results.filter(Boolean).length;
