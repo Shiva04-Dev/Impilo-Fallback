@@ -19,8 +19,8 @@ const EXPLICIT_SWITCHES = [
 
 const AFRIKAANS_MARKERS = [
   /\b(ek|jy|hy|sy|ons|julle|hulle)\b/i,
-  /\b(is|was|het|kan|wil|moet|sal|mag)\b/i,
-  /\b(die|\'n|nie|ook|maar|want|dan|as)\b/i,
+  /\b(het|kan|wil|moet|sal|mag)\b/i,
+  /\b(die|\'n|nie|ook|maar|want|dan)\b/i,
   /\basjou?blief\b/i,
   /\bbaie\b/i,
   /\bdankie\b/i,
