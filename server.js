@@ -13,7 +13,7 @@ const cosmos = new CosmosClient({ endpoint: process.env.COSMOS_ENDPOINT, key: pr
 const container = cosmos.database("Impilo").container("Users");
 
 function requireAdminKey(req, res, next) {
-  if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) return res.sendStatus(401);
+  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) return res.sendStatus(401);
   next();
 }
 

@@ -10,6 +10,7 @@ async function appendTurns(container, userId, newTurns, extraFields = {}) {
   await container.items.upsert({
     id: userId,
     userId,
+    type: "user",
     lastMessageDate: new Date().toISOString(),
     history,
     ...extraFields,
@@ -26,6 +27,7 @@ async function resetHistory(container, userId) {
   // This preserves lastTopicLabel, lastMessageDate, and any other fields
   await container.items.upsert({
     ...resource,
+    type: "user",
     history: [],
     lastMessageDate: new Date().toISOString(),
   });
