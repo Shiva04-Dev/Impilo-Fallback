@@ -70,20 +70,18 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
   if (changed) await setStoredLanguage(container, userId, lang);
  
   // 2. Crisis / GBV — always fires first, in the resolved language
-  if (isGBV(userText)) {
-    for (const line of GBV_CRISIS_SCRIPTS[lang] ?? GBV_CRISIS_SCRIPTS.en) await sendFn(line);
+  const crisisHit = isCrisis(userText);
+  const gbvHit = isGBV(userText);
+
+  if (crisisHit || gbvHit) {
+    const scripts = [
+      ...(crisisHit ? (CRISIS_SCRIPTS[lang] ?? CRISIS_SCRIPTS.en) : []),
+      ...(gbvHit ? (GBV_CRISIS_SCRIPTS[lang] ?? GBV_CRISIS_SCRIPTS.en) : []),
+    ];
+    for (const line of scripts) await sendFn(line);
     await appendTurns(container, userId, [
       { role: "user", content: userText },
-      { role: "assistant", content: "[Crisis resources provided — GBV variant]" },
-    ]);
-    return;
-  }
- 
-  if (isCrisis(userText)) {
-    for (const line of CRISIS_SCRIPTS[lang] ?? CRISIS_SCRIPTS.en) await sendFn(line);
-    await appendTurns(container, userId, [
-      { role: "user", content: userText },
-      { role: "assistant", content: "[Crisis resources provided]" },
+      { role: "assistant", content: `[Crisis resources provided${crisisHit && gbvHit ? " — crisis+GBV" : crisisHit ? "" : " — GBV variant"}]` },
     ]);
     return;
   }
