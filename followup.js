@@ -3,11 +3,11 @@ const { sendWhatsAppMessage } = require("./whatsapp");
 const { callLLM } = require("./ai");
 const { SYSTEM_PROMPT } = require("./systemPrompt");
 
-async function getStaleUsers(container, hoursAgo = 48) {
-  const cutoff = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
-  const query = `SELECT * FROM Users u WHERE (NOT IS_DEFINED(u.type) OR u.type = "user") AND u.lastMessageDate < "${cutoff}" AND NOT STARTSWITH(u.userId, "web-")`;
-  const { resources } = await container.items.query(query).fetchAll();
-  return resources;
+async function getStaleUsers(users, hoursAgo = 48) {
+  const cutoff = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+  return users
+    .find({ lastMessageDate: { $lt: cutoff }, userId: { $not: /^web-/ } })
+    .toArray();
 }
 
 async function sendFollowUp(userId, lastTopicLabel) {

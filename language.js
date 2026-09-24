@@ -77,24 +77,21 @@ function resolveLanguage(userText, storedLang) {
   return { lang: "en", changed: false };
 }
 
-const LANG_KEY = (userId) => `lang:${userId}`;
-
-async function getStoredLanguage(container, userId) {
+async function getStoredLanguage(users, userId) {
   try {
-    const item = await container.item(LANG_KEY(userId), userId).read();
-    return item?.resource?.lang ?? null;
+    const doc = await users.findOne({ _id: userId }, { projection: { lang: 1 } });
+    return doc?.lang ?? null;
   } catch {
     return null;
   }
 }
 
-async function setStoredLanguage(container, userId, lang) {
-  await container.items.upsert({
-    id: LANG_KEY(userId),
-    userId,
-    type: "language",
-    lang,
-  });
+async function setStoredLanguage(users, userId, lang) {
+  await users.updateOne(
+    { _id: userId },
+    { $set: { lang }, $setOnInsert: { userId, createdAt: new Date() } },
+    { upsert: true }
+  );
 }
 
 module.exports = { resolveLanguage, getStoredLanguage, setStoredLanguage };
