@@ -20,6 +20,7 @@ function overDailyLimit() {
 }
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 
 // Turn body-parser's JSON syntax errors into a clean 400 instead of Express's default stack-trace page
@@ -61,6 +62,9 @@ setInterval(() => {
     if (now - entry.start > 60_000) demoChatHits.delete(ip);
   }
 }, 60_000).unref();
+
+// Lightweight health check for uptime pings (keeps the free host awake)
+app.get("/healthz", (req, res) => res.json({ status: "ok", time: new Date().toISOString() }));
 
 // Real WhatsApp webhook (dormant until business verification clears)
 app.get("/webhook", (req, res) => {
