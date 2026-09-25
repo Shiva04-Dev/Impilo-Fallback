@@ -1,6 +1,6 @@
 const { callLLM } = require("./ai");
 
-async function maybeUpdateTopicLabel(container, userId, recentMessages) {
+async function maybeUpdateTopicLabel(users, userId, recentMessages) {
   const userTurns = recentMessages.filter(m => m.role === "user");
   if (userTurns.length % 4 !== 0) return; // only run every ~4 user turns
 
@@ -17,11 +17,7 @@ async function maybeUpdateTopicLabel(container, userId, recentMessages) {
     return;
   }
 
-  const { resource } = await container.item(userId, userId).read().catch(() => ({ resource: null }));
-  if (resource) {
-    resource.lastTopicLabel = summary.trim();
-    await container.items.upsert(resource);
-  }
+  await users.updateOne({ _id: userId }, { $set: { lastTopicLabel: summary.trim() } });
 }
 
 module.exports = { maybeUpdateTopicLabel };
