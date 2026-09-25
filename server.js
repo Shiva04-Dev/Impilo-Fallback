@@ -1,5 +1,6 @@
 require("dotenv").config({ quiet: true });
 const express = require("express");
+const crypto = require("crypto");
 const { connectDB } = require("./db");
 const { handleIncomingMessage } = require("./conversation");
 const { sendWhatsAppMessage } = require("./whatsapp");
@@ -7,6 +8,34 @@ const { scheduleFollowUps, getStaleUsers, sendFollowUp } = require("./followup")
 const helmet = require("helmet");
 
 const MAX_MESSAGE_LENGTH = 2000; // reject oversized messages (cost + storage abuse)
+
+const META_APP_SECRET = process.env.META_APP_SECRET;
+let metaSecretWarned = false;
+
+// Verify Meta's X-Hub-Signature-256 HMAC. Active only when META_APP_SECRET is set.
+function verifyMetaSignature(req) {
+  if (!META_APP_SECRET) {
+    if (!metaSecretWarned) {
+      console.warn("META_APP_SECRET not set — webhook signature check is DISABLED");
+      metaSecretWarned = true;
+    }
+    return true; // no secret yet: behave as before
+  }
+  const header = req.get("X-Hub-Signature-256") || "";
+  if (!header.startsWith("sha256=") || !req.rawBody) return false;
+  const expected = "sha256=" + crypto.createHmac("sha256", META_APP_SECRET).update(req.rawBody).digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  // timingSafeEqual throws if lengths differ, so guard first
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function safeKeyEqual(provided, expected) {
+  if (!expected || typeof provided !== "string") return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 // Simple in-memory daily cap on demo LLM calls (resets on restart; fine for a single-instance pilot)
 const DEMO_DAILY_LIMIT = Number(process.env.DEMO_DAILY_LIMIT) || 1000;
@@ -26,7 +55,9 @@ function overDailyLimit() {
 const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf; }, // keep raw bytes for webhook signature check
+}));
 
 // Turn body-parser's JSON syntax errors into a clean 400 instead of Express's default stack-trace page
 app.use((err, req, res, next) => {
@@ -41,7 +72,7 @@ app.use(express.static("public")); // serves chat-demo.html at /chat-demo.html
 let users, webSessions; // MongoDB collections, set in start() below
 
 function requireAdminKey(req, res, next) {
-  if (!process.env.ADMIN_KEY || req.headers["x-admin-key"] !== process.env.ADMIN_KEY) return res.sendStatus(401);
+  if (!safeKeyEqual(req.get("x-admin-key"), process.env.ADMIN_KEY)) return res.sendStatus(401);
   next();
 }
 
@@ -82,6 +113,9 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  if (!verifyMetaSignature(req)) {
+    return res.sendStatus(403);
+  }
   res.sendStatus(200);
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -118,9 +152,14 @@ app.post("/demo/chat", demoChatLimiter, async (req, res) => {
 
 // Manual follow-up trigger, for demo/recording purposes
 app.post("/admin/trigger-followup", requireAdminKey, async (req, res) => {
-  const staleUsers = await getStaleUsers(users);
-  for (const user of staleUsers) await sendFollowUp(user.userId, user.lastTopicLabel);
-  res.json({ messaged: staleUsers.length });
+  try {
+    const staleUsers = await getStaleUsers(users);
+    for (const user of staleUsers) await sendFollowUp(user.userId, user.lastTopicLabel);
+    res.json({ messaged: staleUsers.length });
+  } catch (err) {
+    console.error("Admin trigger error:", err.message);
+    if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // scheduleFollowUps(users); // real hourly cron check, runs alongside the manual trigger above
