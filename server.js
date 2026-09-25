@@ -4,11 +4,15 @@ const { connectDB } = require("./db");
 const { handleIncomingMessage } = require("./conversation");
 const { sendWhatsAppMessage } = require("./whatsapp");
 const { scheduleFollowUps, getStaleUsers, sendFollowUp } = require("./followup");
+const helmet = require("helmet");
 
 const MAX_MESSAGE_LENGTH = 2000; // reject oversized messages (cost + storage abuse)
 
 // Simple in-memory daily cap on demo LLM calls (resets on restart; fine for a single-instance pilot)
 const DEMO_DAILY_LIMIT = Number(process.env.DEMO_DAILY_LIMIT) || 1000;
+
+// Web test-chat endpoint is on by default locally; set ENABLE_WEB_CHAT=false on the host to close it
+const WEB_CHAT_ENABLED = process.env.ENABLE_WEB_CHAT !== "false";
 let demoDay = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 let demoCount = 0;
 function overDailyLimit() {
@@ -21,6 +25,7 @@ function overDailyLimit() {
 
 const app = express();
 app.set("trust proxy", 1);
+app.use(helmet());
 app.use(express.json());
 
 // Turn body-parser's JSON syntax errors into a clean 400 instead of Express's default stack-trace page
@@ -91,6 +96,7 @@ app.post("/webhook", async (req, res) => {
 
 // Custom chat front-end endpoint (the one actually in use right now)
 app.post("/demo/chat", demoChatLimiter, async (req, res) => {
+  if (!WEB_CHAT_ENABLED) return res.status(404).json({ error: "Not found" });
   const { userId, message } = req.body ?? {};
   // Web chats may only use web- IDs, and live in their own collection,
   // so the website can never read or change a WhatsApp user's data.
