@@ -17,6 +17,8 @@ async function connectDB() {
 
   // Speeds up the follow-up query (users inactive for 48h+)
   await users.createIndex({ lastMessageDate: 1 });
+  await users.createIndex({ "consent.baselineTracking": 1 })
+  await webSessions.createIndex({ "consent.baselineTracking": 1 })
 
   console.log(`Connected to MongoDB (database: ${db.databaseName})`);
   return { users, webSessions };

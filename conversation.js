@@ -4,6 +4,7 @@ const { getHistory, appendTurns, resetHistory } = require("./history");
 const { callLLM } = require("./ai");
 const { maybeUpdateTopicLabel } = require("./topicLabel");
 const { resolveLanguage, getStoredLanguage, setStoredLanguage } = require("./language");
+const { MAX_CONSENT_ATTEMPTS, parseConsentAnswer, getConsentState, claimConsentQuestion, claimConsentAnswer, claimConsentDefault, GREETING, CONSENT_QUESTION, CONSENT_QUESTION_RETURNING, CONSENT_RETRY, CONSENT_ACK_YES, CONSENT_ACK_NO} = require("./consent")
 
 const CRISIS_SCRIPTS = {
   en: [
@@ -84,6 +85,56 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
       { role: "assistant", content: `[Crisis resources provided${crisisHit && gbvHit ? " — crisis+GBV" : crisisHit ? "" : " — GBV variant"}]` },
     ]);
     return;
+  }
+
+  const { isReturningUser, hasConsentRecord, pendingConsent } = await getConsentState(container, userId)
+
+  if (!hasConsentRecord && !pendingConsent) {
+    const won = await claimConsentQuestion(container, userId, userText)
+
+    if (won) {
+      if (!isReturningUser) await sendFn(GREETING[lang] ?? GREETING.en)
+        
+      const question = isReturningUser
+        ? (CONSENT_QUESTION_RETURNING[lang] ?? CONSENT_QUESTION_RETURNING.en)
+        : (CONSENT_QUESTION[lang] ?? CONSENT_QUESTION.en)
+      await sendFn(question)
+    }
+
+    return
+  }
+
+  if (pendingConsent) {
+    const answer = parseConsentAnswer(userText)
+
+    if (answer === null) {
+      const doc = await container.findOneAndUpdate(
+        { _id: userId, pendingConsent: true },
+        { $inc: { consentAttempts: 1 } },
+        { returnDocument: "after" }
+      )
+
+      const attempts = doc?.consentAttempts ?? MAX_CONSENT_ATTEMPTS
+
+      if (attempts < MAX_CONSENT_ATTEMPTS) {
+        await sendFn(CONSENT_RETRY[lang] ?? CONSENT_RETRY.en)
+        
+        return
+      }
+
+      const priorDefault = await claimConsentDefault(container, userId)
+      if (!priorDefault) return
+      
+      await sendFn(CONSENT_ACK_NO[lang] ?? CONSENT_ACK_NO.en)
+    } else {
+      const prior = await claimConsentAnswer(container, userId, answer);
+      
+      if (!prior) return
+      
+      await sendFn(answer ? (CONSENT_ACK_YES[lang] ?? CONSENT_ACK_YES.en) : (CONSENT_ACK_NO[lang] ?? CONSENT_ACK_NO.en))
+      
+      userText = prior.pendingFirstMessage || userText
+    }
   }
  
   // 3. Reset
