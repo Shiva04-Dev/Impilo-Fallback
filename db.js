@@ -2,9 +2,7 @@ const { MongoClient } = require("mongodb");
 
 let client;
 
-// Connects once at startup and returns two collections:
-// - users:       WhatsApp users (identified by phone number)
-// - webSessions: website test chats (identified by a random web-<uuid> per browser)
+// Connects once at startup; returns the users (WhatsApp) and webSessions (web chat) collections
 async function connectDB() {
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is not set in .env");
 

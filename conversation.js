@@ -48,12 +48,9 @@ const GBV_CRISIS_SCRIPTS = {
 };
 
 const RESET_TRIGGERS = [
-  // English
   "reset", "clear", "start afresh", "start over", "new chat",
   "forget everything", "clear history", "clear chat", "reset chat",
-  // Afrikaans
   "begin oor", "skrap alles", "nuwe gesels", "vergeet alles", "herstel",
-  // Zulu
   "qala kabusha", "sula konke", "ingxoxo entsha", "khohlwa konke",
 ];
 

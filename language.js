@@ -1,15 +1,10 @@
 const EXPLICIT_SWITCHES = [
-  // English requests
   { pattern: /\b(english|speak english|in english|use english)\b/i, lang: "en" },
-
-  // Afrikaans requests (English or Afrikaans phrasing)
   {
     pattern:
       /\b(afrikaans|praat afrikaans|in afrikaans|gebruik afrikaans|afrikaans asseblief|afrikaans please)\b/i,
     lang: "af",
   },
-
-  // isiZulu requests (English or Zulu phrasing)
   {
     pattern:
       /\b(zulu|isizulu|ngizulu|ngifuna isizulu|speak zulu|in zulu|use zulu|zulu please)\b/i,
@@ -35,10 +30,7 @@ const ZULU_MARKERS = [
   /\b(uyabona|uyazi|uyafuna)\b/i,
 ];
 
-/**
- * Detect the language from raw message text.
- * Returns "en" | "af" | "zu", or null if no signal is strong enough.
- */
+// Detect "en" | "af" | "zu" from message text, or null if no strong signal
 function detectLanguage(text) {
   for (const { pattern, lang } of EXPLICIT_SWITCHES) {
     if (pattern.test(text)) return lang;
@@ -53,15 +45,7 @@ function detectLanguage(text) {
   return null;
 }
 
-/**
- * Resolve the language for this turn.
- *
- * @param {string} userText  - raw incoming message
- * @param {string|null} storedLang - language previously persisted for this user
- * @returns {{ lang: string, changed: boolean }}
- *   lang    – the language to use for this turn ("en" | "af" | "zu")
- *   changed – true if the language has changed (caller should persist the new value)
- */
+// Pick the language for this turn; `changed` tells the caller to persist it
 function resolveLanguage(userText, storedLang) {
   const detected = detectLanguage(userText);
 

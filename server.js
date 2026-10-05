@@ -132,8 +132,7 @@ app.post("/webhook", async (req, res) => {
 app.post("/demo/chat", demoChatLimiter, async (req, res) => {
   if (!WEB_CHAT_ENABLED) return res.status(404).json({ error: "Not found" });
   const { userId, message } = req.body ?? {};
-  // Web chats may only use web- IDs, and live in their own collection,
-  // so the website can never read or change a WhatsApp user's data.
+  // Web chats use web- IDs in their own collection, isolated from WhatsApp user data
   if (typeof userId !== "string" || !userId.startsWith("web-") || typeof message !== "string" || !message.trim() || message.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: "Invalid request" });
   }

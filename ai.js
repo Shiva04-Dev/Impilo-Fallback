@@ -42,8 +42,7 @@ async function requestOnce(cfg, messages, maxTokens) {
   const choice = res.data?.choices?.[0];
   let text = choice?.message?.content ?? "";
 
-  // Some models (e.g. Qwen) put their reasoning inside <think> tags in the content.
-  // Strip closed blocks, and any unclosed block left by a cutoff.
+  // Strip <think> blocks (closed, or unclosed from a cutoff) that some models emit
   text = text
     .replace(/<think>[\s\S]*?<\/think>/g, "")
     .replace(/<think>[\s\S]*$/, "")
@@ -56,8 +55,7 @@ function isComplete({ text, finish }) {
   return text.length > 0 && finish !== "length";
 }
 
-// Last resort: keep everything up to the final complete sentence,
-// but only if that keeps most of the reply (avoids sending a stub).
+// Last resort: keep up to the final complete sentence, if that keeps most of the reply
 function trimToLastSentence(text) {
   const lastEnd = Math.max(
     text.lastIndexOf("."), text.lastIndexOf("!"),
