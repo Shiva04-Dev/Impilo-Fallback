@@ -30,7 +30,6 @@ const ZULU_MARKERS = [
   /\b(uyabona|uyazi|uyafuna)\b/i,
 ];
 
-// Detect "en" | "af" | "zu" from message text, or null if no strong signal
 function detectLanguage(text) {
   for (const { pattern, lang } of EXPLICIT_SWITCHES) {
     if (pattern.test(text)) return lang;

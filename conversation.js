@@ -62,12 +62,11 @@ const RESET_MESSAGES = {
 };
 
 async function handleIncomingMessage(container, userId, userText, sendFn) {
-  // 1. Resolve language
   const storedLang = await getStoredLanguage(container, userId);
   const { lang, changed } = resolveLanguage(userText, storedLang);
   if (changed) await setStoredLanguage(container, userId, lang);
  
-  // 2. Crisis / GBV — always fires first, in the resolved language
+  // Crisis / GBV always fires first, in the resolved language
   const crisisHit = isCrisis(userText);
   const gbvHit = isGBV(userText);
 
@@ -134,7 +133,6 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
     }
   }
  
-  // 3. Reset
   const normalized = userText.toLowerCase().trim().replace(/[.!?]+$/, "");
   const isReset = RESET_TRIGGERS.includes(normalized);
   if (isReset) {
@@ -143,7 +141,6 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
     return;
   }
  
-  // 4. Normal LLM turn
   const history = await getHistory(container, userId);
 
   const messages = [
@@ -171,7 +168,6 @@ async function handleIncomingMessage(container, userId, userText, sendFn) {
     { role: "assistant", content: parts.join(" ||| ") }, // save only what was actually sent
   ]);
  
-  // 5. Update topic label every ~4 turns
   await maybeUpdateTopicLabel(container, userId, [...history, { role: "user", content: userText }]);
 }
  

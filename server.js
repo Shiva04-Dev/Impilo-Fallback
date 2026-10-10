@@ -42,11 +42,11 @@ const DEMO_DAILY_LIMIT = Number(process.env.DEMO_DAILY_LIMIT) || 1000;
 
 // Web test-chat endpoint is on by default locally; set ENABLE_WEB_CHAT=false on the host to close it
 const WEB_CHAT_ENABLED = process.env.ENABLE_WEB_CHAT !== "false";
-let demoDay = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+let demoDay = new Date().toISOString().slice(0, 10);
 let demoCount = 0;
 function overDailyLimit() {
   const today = new Date().toISOString().slice(0, 10);
-  if (today !== demoDay) { demoDay = today; demoCount = 0; } // new day, reset
+  if (today !== demoDay) { demoDay = today; demoCount = 0; }
   if (demoCount >= DEMO_DAILY_LIMIT) return true;
   demoCount++;
   return false;
@@ -67,9 +67,9 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-app.use(express.static("public")); // serves chat-demo.html at /chat-demo.html
+app.use(express.static("public"));
 
-let users, webSessions; // MongoDB collections, set in start() below
+let users, webSessions;
 
 function requireAdminKey(req, res, next) {
   if (!safeKeyEqual(req.get("x-admin-key"), process.env.ADMIN_KEY)) return res.sendStatus(401);
